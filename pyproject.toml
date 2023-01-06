@@ -1,0 +1,15 @@
+[tool.poetry]
+name = "exotic-collections"
+version = "0.1.0"
+description = ""
+authors = ["msheldon32 <mattsheldon914@gmail.com>"]
+readme = "README.md"
+packages = [{include = "exotic_collections"}]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
