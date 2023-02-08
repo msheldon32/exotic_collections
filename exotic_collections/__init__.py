@@ -15,6 +15,8 @@ class BijectiveDict(dict):
     def __setitem__(self, key, value):
         if value in self.inverse and self.inverse[value] != key:
             raise ValueError("Value already exists")
+        if key in self:
+            del self.inverse[self[key]]
         super(BijectiveDict, self).__setitem__(key, value)
         self.inverse[value] = key
 
@@ -44,15 +46,15 @@ class KDepthDict(dict):
     def from_dict(cls, dictionary, k_depth):
         kdepth_dict = cls(k_depth)
         if k_depth == 0:
-            raise ValueError("Cannot set a value at depth 0")
+            raise KeyError("Cannot set a value at depth 0")
 
         for key, value in dictionary.items():
             if k_depth == 1 and isinstance(value, dict):
-                raise ValueError("Cannot set a dictionary at depth 1")
+                raise KeyError("Cannot set a dictionary at depth 1")
             elif k_depth > 1 and isinstance(value, dict):
                 kdepth_dict[key] = cls.from_dict(value, k_depth - 1)
             elif k_depth > 1 and not isinstance(value, dict):
-                raise ValueError("Cannot set a non-dictionary value at depth {}".format(k_depth))
+                raise KeyError("Cannot set a non-dictionary value at depth {}".format(k_depth))
             kdepth_dict[key] = value
 
         return kdepth_dict
@@ -60,7 +62,7 @@ class KDepthDict(dict):
     def __getitem__(self, key):
         if isinstance(key, tuple) or isinstance(key, list):
             if len(key) != self.k_depth:
-                raise ValueError("Key of length {} does not match depth {}".format(len(key), self.k_depth))
+                raise KeyError("Key of length {} does not match depth {}".format(len(key), self.k_depth))
             dic_iter = self
             for k in key:
                 dic_iter = dic_iter[k]
@@ -69,8 +71,8 @@ class KDepthDict(dict):
         if key in self:
             return super(KDepthDict, self).__getitem__(key)
         else:
-            self[key] = KDepthDict()
-            self[key].k_depth = self.k_depth + 1
+            self[key] = KDepthDict(self.k_depth - 1)
+            self[key].k_depth = self.k_depth - 1
             return self[key]
 
     def __repr__(self):
@@ -78,21 +80,21 @@ class KDepthDict(dict):
 
     def __setitem__(self, key, value):
         if self.k_depth == 0:
-            raise ValueError("Cannot set a value at depth 0")
+            raise KeyError("Cannot set a value at depth 0")
         elif self.k_depth == 1:
             if isinstance(value, dict):
-                raise ValueError("Cannot set a dictionary at depth 1")
+                raise KeyError("Cannot set a dictionary at depth 1")
             super(KDepthDict, self).__setitem__(key, value)
         else:
             if isinstance(value, KDepthDict):
                 if value.k_depth != self.k_depth - 1:
-                    raise ValueError("Cannot set a dictionary of depth {} at depth {}".format(value.k_depth, self.k_depth))
+                    raise KeyError("Cannot set a dictionary of depth {} at depth {}".format(value.k_depth, self.k_depth))
                 super(KDepthDict, self).__setitem__(key, value)
             elif isinstance(value, dict):
                 kdepth_dict = KDepthDict.from_dict(value, self.k_depth - 1)
                 super(KDepthDict, self).__setitem__(key, kdepth_dict)
             else:
-                raise ValueError("Cannot set a non-dictionary value at depth {}".format(self.k_depth))
+                raise KeyError("Cannot set a non-dictionary value at depth {}".format(self.k_depth))
 
 
 class AccessCountDict(dict):
