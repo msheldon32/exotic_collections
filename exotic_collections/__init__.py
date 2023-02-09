@@ -143,31 +143,54 @@ class AccessCountDict(dict):
     def __repr__(self):
         return super(AccessCountDict, self).__repr__() + ""
 
-class BFSQueue:
+class BFSIter:
     """
-        A queue that automatically supports Breadth First Search of a data structure that implements an iterator
+        A class that implements a breadth-first search iterator
     """
-    def __init__(self, root, use_seen=True, max_depth=None):
-        if not hasattr(root, "__iter__"):
-            raise ValueError("Root object must implement an iterator")
+    def __init__(self, root, child_attribute="__iter__", use_seen=True, max_depth=None):
+        self.child_attribute = child_attribute
+        self.is_child_callable = False
         
-        if use_seen and not hasattr(root, "__hash__"):
-            raise ValueError("Root object must implement a hash function in order to use a seen set")
+        if self.child_attribute != "__iter__":
+            if not hasattr(root, self.child_attribute):
+                raise ValueError("Root does not have attribute {}".format(self.child_attribute))
+            self.is_child_callable = callable(getattr(root, self.child_attribute))
+
+            if not hasattr(getattr(root, self.child_attribute), "__iter__") and not self.is_child_callable:
+                raise ValueError("Attribute {} of root is not iterable".format(self.child_attribute))
 
         self.deque = deque([(0,root)])
         if use_seen:
             self.seen = set([root])
         self.use_seen = use_seen
         self.max_depth = max_depth
+
+        self.orig_root = root
+
+    def reset(self):
+        self.deque = deque([(0,self.orig_root)])
+        if self.use_seen:
+            self.seen = set([self.orig_root])
+
+    def pop(self):
+        return self.__next__()
 
     def __next__(self):
         if len(self.deque) == 0:
             raise StopIteration
         res = self.deque.popleft()
-        if not hasattr(res[1], "__iter__"):
-            return res
-        for neighbor in res[1]:
-            if self.use_seen and neighbor not in self.seen:
+
+        if self.child_attribute == "__iter__":
+            if not hasattr(res[1], "__iter__"):
+                return res
+            neighbors = [x for x in res[1]]
+        elif self.is_child_callable:
+            neighbors = getattr(res[1], self.child_attribute)()
+        else:
+            neighbors = [x for x in getattr(res[1], self.child_attribute)]
+
+        for neighbor in neighbors:
+            if self.use_seen and neighbor in self.seen:
                 continue
             if self.max_depth is not None and res[0] >= self.max_depth:
                 continue
@@ -179,31 +202,49 @@ class BFSQueue:
     def __iter__(self):
         return self
 
-class DFSQueue:
+class DFSIter:
     """
-        A queue that automatically supports Depth First Search of a data structure that implements an iterator
+        A class that implements a depth-first search iterator
     """
-    def __init__(self, root, use_seen=True, max_depth=None):
-        if not hasattr(root, "__iter__"):
-            raise ValueError("Root object must implement an iterator")
+    def __init__(self, root, child_attribute="__iter__", use_seen=True, max_depth=None):
+        self.child_attribute = child_attribute
+        self.is_child_callable = False
         
-        if use_seen and not hasattr(root, "__hash__"):
-            raise ValueError("Root object must implement a hash function in order to use a seen set")
+        if self.child_attribute != "__iter__":
+            if not hasattr(root, self.child_attribute):
+                raise ValueError("Root does not have attribute {}".format(self.child_attribute))
+            self.is_child_callable = callable(getattr(root, self.child_attribute))
+
+            if not hasattr(getattr(root, self.child_attribute), "__iter__") and not self.is_child_callable:
+                raise ValueError("Attribute {} of root is not iterable".format(self.child_attribute))
 
         self.deque = deque([(0,root)])
         if use_seen:
             self.seen = set([root])
         self.use_seen = use_seen
         self.max_depth = max_depth
+        self.orig_root = root
+
+    def pop(self):
+        return self.__next__()
 
     def __next__(self):
         if len(self.deque) == 0:
             raise StopIteration
+
         res = self.deque.pop()
-        if not hasattr(res[1], "__iter__"):
-            return res
-        for neighbor in res[1]:
-            if self.use_seen and neighbor not in self.seen:
+
+        if self.child_attribute == "__iter__":
+            if not hasattr(res[1], "__iter__"):
+                return res
+            neighbors = [x for x in res[1]]
+        elif self.is_child_callable:
+            neighbors = getattr(res[1], self.child_attribute)()
+        else:
+            neighbors = [x for x in getattr(res[1], self.child_attribute)]
+
+        for neighbor in neighbors:
+            if self.use_seen and neighbor in self.seen:
                 continue
             if self.max_depth is not None and res[0] >= self.max_depth:
                 continue
@@ -212,8 +253,14 @@ class DFSQueue:
                 self.seen.add(neighbor)
         return res
 
+    def reset(self):
+        self.deque = deque([(0,self.orig_root)])
+        if self.use_seen:
+            self.seen = set([self.orig_root])
+
     def __iter__(self):
         return self
+
 
 class TrieNode:
     def __init__(self, char):
